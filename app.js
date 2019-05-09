@@ -5,14 +5,14 @@ const bodyParser = require('body-parser');
 const request = require('request');
 const { parseOperations } = require('parse-tx-xdr-to-json-response');
 
-app.use(bodyParser.json({limit: '50mb'}));
-app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 const triamConf = {
     port: 9080,
     passPhrase: "SAAK5654--ARM-NETWORK--BHC3SQOHPO2GGI--BY-B.A.P--CNEMJQCWPTA--RUBY-AND-BLOCKCHAIN--3KECMPY5L7W--THANKYOU-CS--S542ZHDVHLFV",
     horizonServer: "https://testnet-horizon.triamnetwork.com",
-    minimumStartingBalance: '20' 
+    minimumStartingBalance: '20'
 };
 
 app.listen(triamConf.port, function () {
@@ -20,18 +20,18 @@ app.listen(triamConf.port, function () {
 });
 
 TriamSDK.Network.use(new TriamSDK.Network(triamConf.passPhrase));
-const horizonServer = new TriamSDK.Server(triamConf.horizonServer, {allowHttp: true}); //connect to horizon server
+const horizonServer = new TriamSDK.Server(triamConf.horizonServer, { allowHttp: true }); //connect to horizon server
 
 //Create new account with starting balance from another account
 app.post('/create-account', async function (req, res) {
-    const { funderSecret , startingBalance } = req.body;
-    if(!funderSecret){
+    const { funderSecret, startingBalance } = req.body;
+    if (!funderSecret) {
         return res.status(400).json({
             error: "bad request"
         })
     }
     const newRandomKeyPair = TriamSDK.Keypair.random();
-    const operation =  TriamSDK.Operation.createAccount({
+    const operation = TriamSDK.Operation.createAccount({
         destination: newRandomKeyPair.publicKey(),
         startingBalance: startingBalance || triamConf.minimumStartingBalance
     });
@@ -72,7 +72,7 @@ app.post('/payment', async function (req, res) {
         error: "asset information is incorrect"
     });
 
-    const operation =  TriamSDK.Operation.payment({
+    const operation = TriamSDK.Operation.payment({
         destination: params.destination,
         asset: asset,
         amount: String(params.amount)
@@ -94,7 +94,7 @@ app.post('/payment', async function (req, res) {
         })
     }
 });
-//Get information of an account, include its balance
+// API for balance inquiry
 app.get('/balances/:address', async function (req, res) {
     /*
     * params:
@@ -102,25 +102,25 @@ app.get('/balances/:address', async function (req, res) {
     */
     try {
         const result = await horizonServer.loadAccount(req.params.address);
-        console.log("------ account info ---------");
+        console.log("------ get account info ---------");
         console.log(result);
         console.log("------------------------------------------");
         res.status(200).json(result.balances);
     } catch (err) {
         console.log("Not found wallet");
-        res.status(400).json({error: "Not found wallet"});
+        res.status(400).json({ error: "Not found wallet" });
     }
 });
 
 // API for inquiring current block height 
-//Get latest ledger of blockchain
 app.get('/latest_ledger', async function (req, res) {
     request.get(triamConf.horizonServer, function (error, response, body) {
-        if (error) res.status(500).json({error});
-        const { core_latest_ledger, history_latest_ledger} = JSON.parse(body);
-        res.status(200).json({ core_latest_ledger });    
+        if (error) res.status(500).json({ error });
+        const { core_latest_ledger, history_latest_ledger } = JSON.parse(body);
+        res.status(200).json({ core_latest_ledger });
     })
 });
+
 //API inquiring the transactions history of an account
 app.get('/account-transaction/:address', async function (req, res) {
     /*
@@ -128,16 +128,16 @@ app.get('/account-transaction/:address', async function (req, res) {
     * limit(optional): max is 200, default is 20
     * cursor(optional): paging token of transaction, default is empty
     * order(optional): 'desc' or 'asc', default is desc
-    * with_operations: true/false , get detail transactions, default is false
+    * with_operations(optional): true/false , get detail transactions, default is false
     * */
     try {
-        const { params, query} = req;
+        const { params, query } = req;
         let order = query.order ? query.order : 'desc';
-        let limit = query.limit > 0 ? query.limit : 20 ;
+        let limit = query.limit > 0 ? query.limit : 20;
         let cursor = query.cursor ? query.cursor : '';
 
-        if (!params.address){
-            res.status(404).json({error: "Not found wallet"});
+        if (!params.address) {
+            res.status(404).json({ error: "Not found wallet" });
         }
 
         horizonServer.transactions()
@@ -147,7 +147,7 @@ app.get('/account-transaction/:address', async function (req, res) {
             .order(order)
             .call()
             .then(function (result) {
-                if(query.with_operations){
+                if (query.with_operations) {
                     result = result.records.map(record => {
                         record.operations = parseOperations({
                             txEnvelopeXdr: record.envelope_xdr
@@ -158,11 +158,11 @@ app.get('/account-transaction/:address', async function (req, res) {
                 res.status(200).json(result);
             })
             .catch(function (err) {
-                res.status(400).json({error: "Not found wallet"});
+                res.status(400).json({ error: "Not found wallet" });
             })
     } catch (err) {
         console.log("Not found wallet");
-        res.status(400).json({error: "Not found wallet"});
+        res.status(400).json({ error: "Not found wallet" });
     }
 });
 
@@ -173,12 +173,12 @@ app.get('/transactions', async function (req, res) {
     * limit(optional): max is 200, default is 20
     * cursor(optional): paging token of transaction, default is empty
     * order(optional): 'desc' or 'asc', default is desc
-    * with_operations: true/false , get detail transactions, default is false
+    * with_operations(optional): true/false , get detail transactions, default is false
     * */
     try {
         const { query } = req;
         let order = query.order ? query.order : 'desc';
-        let limit = query.limit > 0 ? query.limit : 20 ;
+        let limit = query.limit > 0 ? query.limit : 20;
         let cursor = query.cursor ? query.cursor : '';
 
         horizonServer.transactions()
@@ -187,7 +187,7 @@ app.get('/transactions', async function (req, res) {
             .order(order)
             .call()
             .then(function (result) {
-                if(query.with_operations){
+                if (query.with_operations) {
                     result = result.records.map(record => {
                         record.operations = parseOperations({
                             txEnvelopeXdr: record.envelope_xdr
@@ -199,11 +199,11 @@ app.get('/transactions', async function (req, res) {
                 res.status(200).json(result);
             })
             .catch(function (err) {
-                res.status(400).json({error: "Not found wallet"});
+                res.status(400).json({ error: "Not found wallet" });
             })
     } catch (err) {
         console.log("Not found wallet");
-        res.status(400).json({error: "Not found wallet"});
+        res.status(400).json({ error: "Not found wallet" });
     }
 });
 
@@ -213,7 +213,7 @@ async function submitTransaciton(operation, key, memoText) {
     return new Promise((resolve) => {
         horizonServer.loadAccount(fullKey.publicKey())
             .then(function (account) {
-                let transaction = new TriamSDK.TransactionBuilder(account, {fee: 10000});
+                let transaction = new TriamSDK.TransactionBuilder(account, { fee: 10000 });
                 transaction.addOperation(operation);
                 if (memoText) {
                     let memo = new TriamSDK.Memo.text(memoText);
@@ -231,12 +231,12 @@ async function submitTransaciton(operation, key, memoText) {
                 console.log(memoText);
                 console.log("------------------------------------");
                 console.log("Data return from horizon server:", transaction);
-                resolve({success: true, transaction: transaction});
+                resolve({ success: true, transaction: transaction });
             })
             .catch(err => {
                 console.log("Error:");
                 console.log(err);
-                resolve({success: false, error: err});
+                resolve({ success: false, error: err });
             });
     });
 };
