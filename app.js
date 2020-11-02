@@ -8,15 +8,26 @@ const { parseOperations } = require('parse-tx-xdr-to-json-response');
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-const triamConf = {
-    port: 9080,
-    passPhrase: "SAAK5654--ARM-NETWORK--BHC3SQOHPO2GGI--BY-B.A.P--CNEMJQCWPTA--RUBY-AND-BLOCKCHAIN--3KECMPY5L7W--THANKYOU-CS--S542ZHDVHLFV",
-    horizonServer: "https://testnet-horizon.triamnetwork.com",
-    minimumStartingBalance: '20'
-};
+const CONFIG = {
+    MAIN_NET: {
+        port: 9080,
+        passPhrase: "SAAK5654--ARM-NETWORK--BHC3SQOHPO2GGI--BY-B.A.P--CNEMJQCWPTA--RUBY-AND-BLOCKCHAIN--3KECMPY5L7W--THANKYOU-CS--S542ZHDVHLFV",
+        // Config the URLs of your's horizon server here
+        horizonServer: "http://localhost:8000",
+        minimumStartingBalance: '20'
+    },
+    TEST_NET: {
+        port: 9080,
+        passPhrase: "SAAK5654--ARM-NETWORK--BHC3SQOHPO2GGI--BY-B.A.P--CNEMJQCWPTA--RUBY-AND-BLOCKCHAIN--3KECMPY5L7W--THANKYOU-CS--S542ZHDVHLFV",
+        horizonServer: "https://testnet-horizon.triamnetwork.com",
+        minimumStartingBalance: '20'
+    }
+}
+
+let triamConf = process.env.NODE_ENV == 'production' ? CONFIG.MAIN_NET : CONFIG.TEST_NET;
 
 app.listen(triamConf.port, function () {
-    console.log("Server running in port", triamConf.port);
+    console.log(`Server running on port ${triamConf.port} ${process.env.NODE_ENV || 'TESTNET'}`);
 });
 
 TriamSDK.Network.use(new TriamSDK.Network(triamConf.passPhrase));
@@ -112,7 +123,7 @@ app.get('/balances/:address', async function (req, res) {
     }
 });
 
-// API for inquiring current block height 
+// API for inquiring current block height
 app.get('/latest_ledger', async function (req, res) {
     request.get(triamConf.horizonServer, function (error, response, body) {
         if (error) res.status(500).json({ error });
@@ -250,4 +261,3 @@ const getAsset = function (assetCode, issuerAddress) {
         return new TriamSDK.Asset(assetCode, issuerAddress);
     }
 };
-

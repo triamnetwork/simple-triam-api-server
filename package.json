@@ -1,13 +1,14 @@
 {
   "name": "example-triam",
   "version": "1.0.0",
-  "description": "",
+  "description": "A simple API Server to interact with Horizon using Triam-SDK",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node app.js",
+    "start:prod": "NODE_ENV=production node app.js"
   },
-  "author": "",
+  "author": "Triam team",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.18.3",
