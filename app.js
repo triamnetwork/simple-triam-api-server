@@ -3,10 +3,14 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const request = require('request');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const { parseOperations } = require('parse-tx-xdr-to-json-response');
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(helmet());
+app.use(morgan('combined'));
 
 const CONFIG = {
     MAIN_NET: {
@@ -33,8 +37,8 @@ app.listen(triamConf.port, function () {
 TriamSDK.Network.use(new TriamSDK.Network(triamConf.passPhrase));
 const horizonServer = new TriamSDK.Server(triamConf.horizonServer, { allowHttp: true }); //connect to horizon server
 
-//Create new account with starting balance from another account
-app.post('/create-account', async function (req, res) {
+//generating and new account with starting balance from another account
+app.post('/generate-account', async function (req, res) {
     const { funderSecret, startingBalance } = req.body;
     if (!funderSecret) {
         return res.status(400).json({
@@ -47,12 +51,38 @@ app.post('/create-account', async function (req, res) {
         startingBalance: startingBalance || triamConf.minimumStartingBalance
     });
 
-    const result = await submitTransaciton(operation, funderSecret, 'Test Create Account');
+    const result = await submitTransaction(operation, funderSecret, 'Test Create Account');
 
     if (result.success) {
         res.status(200).json({
             publicKey: newRandomKeyPair.publicKey(),
             secret: newRandomKeyPair.secret(),
+        })
+    } else {
+        res.status(500).json({
+            error: result.error
+        })
+    }
+});
+
+//Create new account with starting balance from another account
+app.post('/create-account', async function (req, res) {
+    const { funderSecret, startingBalance, destination } = req.body;
+    if (!funderSecret || !destination) {
+        return res.status(400).json({
+            error: "bad request"
+        })
+    }
+    const operation = TriamSDK.Operation.createAccount({
+        destination,
+        startingBalance: startingBalance || triamConf.minimumStartingBalance
+    });
+
+    const result = await submitTransaction(operation, funderSecret, 'Funding Account');
+
+    if (result.success) {
+        res.status(200).json({
+            transactionHash: result.transaction.hash
         })
     } else {
         res.status(500).json({
@@ -89,7 +119,7 @@ app.post('/payment', async function (req, res) {
         amount: String(params.amount)
     });
 
-    const result = await submitTransaciton(operation, params.secretKey, params.memo);
+    const result = await submitTransaction(operation, params.secretKey, params.memo);
 
     if (result.success) {
         res.status(200).json({
@@ -218,8 +248,68 @@ app.get('/transactions', async function (req, res) {
     }
 });
 
+app.post('/change-trust', async function (req, res) {    /*
+    * params:
+    * assetCode: name of asset
+    * issuerAddress(optional): wallet address of issuer
+    * secretKey: secret key
+    * memo: maximum 28 bytes
+    * limit: // Defaults to max int64. The limit for the asset to receive. If the limit is set to "0" it deletes the asset from the account.
+    * */
+   try{
+    const params = req.body;
+    const {
+        assetCode,
+        issuerAddress,
+        secretKey,
+        limit,
+        memo
+    } = params;
 
-async function submitTransaciton(operation, key, memoText) {
+    if (!assetCode || !issuerAddress || !secretKey) {
+        return res.status(400).json({  error: "bad request" })
+    }
+    if(limit != null && Number(limit) < 0){
+        return res.status(400).json({  error: "bad request" })
+    }
+    const asset = getAsset(assetCode, issuerAddress);
+
+    if (!asset) {
+      res.status(500).json({
+        error: "asset information is incorrect",
+      });
+    }
+    const operation = TriamSDK.Operation.changeTrust({
+        asset,
+        limit
+    });
+
+    const result = await submitTransaction(operation, secretKey, memo);
+
+    if (result.success) {
+        res.status(200).json({
+            isTrusted: limit != 0,
+            from: TriamSDK.Keypair.fromSecret(params.secretKey).publicKey(),
+            asset: {
+                code: assetCode,
+                issuer: issuerAddress
+            },
+            transactionHash: result.transaction.hash
+        })
+    } else {
+        res.status(500).json({
+            error: 'Submit transaction error',
+            extras: result.error
+        });
+    }
+   }catch(err){
+    console.log("Change-trust ERR", err);
+    res.status(500).json({ error: err.message });
+   }
+})
+
+
+async function submitTransaction(operation, key, memoText) {
     let fullKey = TriamSDK.Keypair.fromSecret(key);
     return new Promise((resolve) => {
         horizonServer.loadAccount(fullKey.publicKey())
@@ -245,9 +335,9 @@ async function submitTransaciton(operation, key, memoText) {
                 resolve({ success: true, transaction: transaction });
             })
             .catch(err => {
-                console.log("Error:");
+                console.log("submitTransaction Error:");
                 console.log(err);
-                resolve({ success: false, error: err });
+                resolve({ success: false, error: err.message });
             });
     });
 };

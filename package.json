@@ -13,6 +13,8 @@
   "dependencies": {
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
+    "helmet": "^4.2.0",
+    "morgan": "^1.10.0",
     "parse-tx-xdr-to-json-response": "0.0.4",
     "request": "^2.87.0",
     "triam-sdk": "0.0.1"

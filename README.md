@@ -1,7 +1,6 @@
 # Triam nodejs server
 
-[![Run in Postman](https://run.pstmn.io/button.svg)](https://www.getpostman.com/run-collection/a03b0dab263d5ff4075d)
-
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/ff0ea53cfbb17c3d7633)
 
 ## TESTNET
 
@@ -31,11 +30,10 @@ npm start
 ```javascript
 const CONFIG = {
     MAIN_NET: {
-        port: 9080,
-        passPhrase: "SAAK5654--ARM-NETWORK--BHC3SQOHPO2GGI--BY-B.A.P--CNEMJQCWPTA--RUBY-AND-BLOCKCHAIN--3KECMPY5L7W--THANKYOU-CS--S542ZHDVHLFV",
+        ...
         // Config the URLs of your's horizon server here
         horizonServer: "http://localhost:8000",
-        minimumStartingBalance: '20'
+        ...
     },
     TESTNET: {
      ...
