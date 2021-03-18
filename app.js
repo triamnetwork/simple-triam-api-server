@@ -39,55 +39,67 @@ const horizonServer = new TriamSDK.Server(triamConf.horizonServer, { allowHttp: 
 
 //generating and new account with starting balance from another account
 app.post('/generate-account', async function (req, res) {
-    const { funderSecret, startingBalance } = req.body;
-    if (!funderSecret) {
-        return res.status(400).json({
-            error: "bad request"
-        })
-    }
-    const newRandomKeyPair = TriamSDK.Keypair.random();
-    const operation = TriamSDK.Operation.createAccount({
-        destination: newRandomKeyPair.publicKey(),
-        startingBalance: startingBalance || triamConf.minimumStartingBalance
-    });
+    try{
+        const { funderSecret, startingBalance } = req.body;
+        if (!funderSecret) {
+            return res.status(400).json({
+                error: "bad request"
+            })
+        }
+        const newRandomKeyPair = TriamSDK.Keypair.random();
+        const operation = TriamSDK.Operation.createAccount({
+            destination: newRandomKeyPair.publicKey(),
+            startingBalance: startingBalance || triamConf.minimumStartingBalance
+        });
 
-    const result = await submitTransaction(operation, funderSecret, 'Test Create Account');
+        const result = await submitTransaction(operation, funderSecret, 'Test Create Account');
 
-    if (result.success) {
-        res.status(200).json({
-            publicKey: newRandomKeyPair.publicKey(),
-            secret: newRandomKeyPair.secret(),
-        })
-    } else {
+        if (result.success) {
+            res.status(200).json({
+                publicKey: newRandomKeyPair.publicKey(),
+                secret: newRandomKeyPair.secret(),
+            })
+        } else {
+            res.status(500).json({
+                error: result.error
+            })
+        }
+    }catch(err){
         res.status(500).json({
-            error: result.error
-        })
+            error: err.message
+        }) ;
     }
 });
 
 //Create new account with starting balance from another account
 app.post('/create-account', async function (req, res) {
-    const { funderSecret, startingBalance, destination } = req.body;
-    if (!funderSecret || !destination) {
-        return res.status(400).json({
-            error: "bad request"
-        })
-    }
-    const operation = TriamSDK.Operation.createAccount({
-        destination,
-        startingBalance: startingBalance || triamConf.minimumStartingBalance
-    });
+    try{
+        const { funderSecret, startingBalance, destination } = req.body;
+        if (!funderSecret || !destination) {
+            return res.status(400).json({
+                error: "bad request"
+            })
+        }
+        const operation = TriamSDK.Operation.createAccount({
+            destination,
+            startingBalance: startingBalance || triamConf.minimumStartingBalance
+        });
 
-    const result = await submitTransaction(operation, funderSecret, 'Funding Account');
+        const result = await submitTransaction(operation, funderSecret, 'Funding Account');
 
-    if (result.success) {
-        res.status(200).json({
-            transactionHash: result.transaction.hash
-        })
-    } else {
+        if (result.success) {
+            res.status(200).json({
+                transactionHash: result.transaction.hash
+            })
+        } else {
+            res.status(500).json({
+                error: result.error
+            })
+        }
+    }catch(err){
         res.status(500).json({
-            error: result.error
-        })
+            error: err.message
+        }) ;
     }
 });
 
@@ -101,38 +113,44 @@ app.post('/payment', async function (req, res) {
     * secretKey: secret key of wallet send asset/coin
     * memo: maximum 28 character
     * */
-    const params = req.body;
-    if (!params.assetCode || !params.destination || !params.amount || !params.secretKey) {
-        return res.status(400).json({
-            error: "bad request"
-        })
-    }
-    const asset = getAsset(params.assetCode, params.issuerAddress);
+   try{
+        const params = req.body;
+        if (!params.assetCode || !params.destination || !params.amount || !params.secretKey) {
+            return res.status(400).json({
+                error: "bad request"
+            })
+        }
+        const asset = getAsset(params.assetCode, params.issuerAddress);
 
-    if (!asset) res.status(500).json({
-        error: "asset information is incorrect"
-    });
+        if (!asset) res.status(500).json({
+            error: "asset information is incorrect"
+        });
 
-    const operation = TriamSDK.Operation.payment({
-        destination: params.destination,
-        asset: asset,
-        amount: String(params.amount)
-    });
+        const operation = TriamSDK.Operation.payment({
+            destination: params.destination,
+            asset: asset,
+            amount: String(params.amount)
+        });
 
-    const result = await submitTransaction(operation, params.secretKey, params.memo);
+        const result = await submitTransaction(operation, params.secretKey, params.memo);
 
-    if (result.success) {
-        res.status(200).json({
-            from: TriamSDK.Keypair.fromSecret(params.secretKey).publicKey(),
-            to: params.destination,
-            amount: params.amount,
-            asset: params.assetCode,
-            transactionHash: result.transaction.hash
-        })
-    } else {
+        if (result.success) {
+            res.status(200).json({
+                from: TriamSDK.Keypair.fromSecret(params.secretKey).publicKey(),
+                to: params.destination,
+                amount: params.amount,
+                asset: params.assetCode,
+                transactionHash: result.transaction.hash
+            })
+        } else {
+            res.status(500).json({
+                error: result.error
+            })
+        }
+    } catch(err){
         res.status(500).json({
-            error: result.error
-        })
+            error: err.message
+        }) ;
     }
 });
 // API for balance inquiry
